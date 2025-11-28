@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Weather Website</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg-top:#0f172a;
+  --bg-bottom:#0ea5a3;
+  --accent:#ffd166;
+  --text:#e6eef6;
+  --muted:rgba(230,238,246,0.8);
+  --shadow:0 10px 30px rgba(2,6,23,0.6);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+}
+*{box-sizing:border-box;}
+html,body{height:100%; margin:0; background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom)); color:var(--text); -webkit-font-smoothing:antialiased;}
+.wrap{min-height:100vh; display:flex;align-items:center; justify-content:center; padding:32px; flex-direction:column;}
+.card{width:980px; max-width:100%; border-radius:18px;overflow:hidden; position:relative;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,0.06); display:grid; grid-template-columns:420px 1fr; gap:0; backdrop-filter: blur(8px); margin-bottom:20px;}
+.left{padding:28px 24px; display:flex; flex-direction:column; gap:18px; min-height:430px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
+h1{margin:0; font-size:20px; letter-spacing:0.2px;}
+.search{display:flex; gap:8px;}
+.search input{flex:1; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); outline:none; font-size:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);}
+.search button{padding:10px 12px; border-radius:10px; border:0; background:var(--accent); color:#08203a;font-weight:600; cursor:pointer;}
+.meta{display:flex; align-items:center; gap:14px; margin-top:6px;}
+.location{font-size:18px; font-weight:600;}
+.temp{font-size:46px; font-weight:700;}
+.desc{color:var(--muted);}
+.details{display:flex; gap:12px; flex-wrap:wrap;}
+.detail{background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; font-size:13px; min-width:86px; text-align:center;}
+.right{position:relative; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02)); display:flex; align-items:center; justify-content:center; min-height:430px;}
+.scene{width:100%; height:100%; position:relative; display:flex; align-items:center; justify-content:center;}
+.sun{position:absolute; top:10%; left:15%; width:140px;height:140px;border-radius:50%;background: radial-gradient(circle at 35% 35%, #fff7d6, #ffd166 40%, #ffb703 80%);filter: drop-shadow(0 16px 30px rgba(255,177,45,0.14));transform-origin:center;animation: sun-rotate 20s linear infinite; z-index:6;}
+@keyframes sun-rotate{ from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.sun::after{content:""; position:absolute; inset:-30px; border-radius:50%; background: conic-gradient(from 0deg at 50% 50%, rgba(255,209,102,0.06), transparent 20%); animation: rays 6s linear infinite; z-index:-1;}
+@keyframes rays{ 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+.cloud{position:absolute; top:18%; right:8%; width:300px;height:120px;border-radius:120px;background:linear-gradient(180deg,#ffffff44,#ffffff1a);filter: blur(0.6px);animation: cloud-move 28s linear infinite; z-index:7;}
+.cloud:before,.cloud:after{content:""; position:absolute; background:linear-gradient(180deg,#fff6,#fff2); border-radius:50%;}
+.cloud:before{width:160px;height:100px;left: -60px;top: -20px;}
+.cloud:after{width:120px;height:80px;left:120px;top:-30px;}
+@keyframes cloud-move{ 0%{transform:translateX(0)} 50%{transform:translateX(-40px)} 100%{transform:translateX(0)} }
+.rain{position:absolute; inset:45% 12% 8% 12%; pointer-events:none; z-index:5;}
+.drop{position:absolute; top:0; width:2px; height:18px; border-radius:2px; background:linear-gradient(180deg,#9ad7ff,#4da6ff); opacity:0.95; animation: fall 0.9s linear infinite;}
+@keyframes fall{ 0%{transform:translateY(-10%) scaleY(0.6); opacity:0} 20%{opacity:1} 100%{transform:translateY(110%) scaleY(1.1); opacity:0} }
+.snow{position:absolute; inset:40% 0 0 0; pointer-events:none; z-index:5;}
+.flake{position:absolute; width:8px; height:8px; border-radius:50%; background:#fff; opacity:0.95; filter:drop-shadow(0 6px 10px rgba(0,0,0,0.15)); animation: snowFall 6s linear infinite;}
+@keyframes snowFall{ 0%{transform:translateY(-5vh) rotate(0)} 100%{transform:translateY(110vh) rotate(360deg)} }
+.fog{position:absolute; left:-10%; bottom:6%; width:120%; height:40%; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.06)); filter: blur(12px); opacity:0; transition:opacity .6s ease; z-index:4;}
+.bolt{position:absolute; width:6px; height:140px; left:70%; top:20%; background:linear-gradient(180deg,#fff7 #fff); transform:skewX(-18deg); opacity:0; animation: bolt 3s linear infinite; z-index:10;}
+@keyframes bolt{ 0%{opacity:0} 10%{opacity:1} 12%{opacity:0} 100%{opacity:0} }
+.presets{display:flex; gap:8px; flex-wrap:wrap;}
+.preset{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.03);font-size:13px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;}
+@media (max-width:880px){
+  .card{grid-template-columns:1fr; width:min(920px,96vw);}
+  .sun{left:50%; transform:translateX(-50%) rotate(0deg);}
+  .cloud{right:6%; top:6%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="left">
+      <header>
+        <h1>Weather</h1>
+        <p class="desc">Search a city</p>
+      </header>
+      <div class="search">
+        <input id="cityInput" type="search" placeholder="Enter city" />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div class="meta">
+        <div>
+          <div class="location" id="loc">—</div>
+          <div class="desc" id="weatherDesc">—</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="temp" id="temp">--°C</div>
+          <div class="desc" id="feels">—</div>
+        </div>
+      </div>
+      <div class="details" id="details">
+        <div class="detail" id="hum">Humidity<br><strong>—</strong></div>
+        <div class="detail" id="wind">Wind<br><strong>—</strong></div>
+        <div class="detail" id="pressure">Pressure<br><strong>—</strong></div>
+        <div class="detail" id="cloudiness">Clouds<br><strong>—</strong></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Preview modes</div>
+        <div class="presets">
+          <button class="preset" data-mode="clear">Clear</button>
+          <button class="preset" data-mode="clouds">Cloudy</button>
+          <button class="preset" data-mode="rain">Rain</button>
+          <button class="preset" data-mode="snow">Snow</button>
+          <button class="preset" data-mode="thunder">Thunder</button>
+          <button class="preset" data-mode="fog">Fog</button>
+        </div>
+      </div>
+    </div>
+    <div class="right" id="sceneContainer">
+      <div class="scene" id="scene">
+        <div class="sun" id="sun"></div>
+        <div class="cloud" id="cloud1"></div>
+        <div class="cloud" id="cloud2" style="right:auto; left:6%; top:26%; width:220px;height:90px; animation-duration:34s; opacity:0.95"></div>
+        <div class="rain" id="rainLayer"></div>
+        <div class="snow" id="snowLayer"></div>
+        <div class="fog" id="fogLayer"></div>
+        <div class="bolt" id="bolt"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const loc = document.getElementById('loc');
+const tempEl = document.getElementById('temp');
+const weatherDesc = document.getElementById('weatherDesc');
+const feels = document.getElementById('feels');
+const hum = document.getElementById('hum');
+const wind = document.getElementById('wind');
+const pressure = document.getElementById('pressure');
+const cloudiness = document.getElementById('cloudiness');
+
+const rainLayer = document.getElementById('rainLayer');
+const snowLayer = document.getElementById('snowLayer');
+const fogLayer = document.getElementById('fogLayer');
+const sun = document.getElementById('sun');
+const cloud1 = document.getElementById('cloud1');
+const cloud2 = document.getElementById('cloud2');
+const bolt = document.getElementById('bolt');
+
+function resetScene(){
+  rainLayer.innerHTML = "";
+  snowLayer.innerHTML = "";
+  fogLayer.style.opacity = 0;
+  bolt.style.opacity = 0;
+  sun.style.display = "none";
+  cloud1.style.display = "none";
+  cloud2.style.display = "none";
+}
+
+function makeRain(intensity=30){
+  rainLayer.innerHTML = "";
+  for(let i=0;i<intensity;i++){
+    const d = document.createElement('div');
+    d.className="drop";
+    d.style.left = Math.random()*100 + "%";
+    d.style.animationDelay = (Math.random()*0.6) + "s";
+    d.style.height = (12 + Math.random()*18) + "px";
+    d.style.opacity = 0.8 + Math.random()*0.2;
+    rainLayer.appendChild(d);
+  }
+}
+
+function makeSnow(count=20){
+  snowLayer.innerHTML = "";
+  for(let i=0;i<count;i++){
+    const f = document.createElement('div');
+    f.className="flake";
+    f.style.left = Math.random()*100 + "%";
+    f.style.animationDelay = (Math.random()*6) + "s";
+    f.style.width = f.style.height = (6 + Math.random()*10) + "px";
+    snowLayer.appendChild(f);
+  }
+}
+
+function flashBolt(){
+  bolt.style.opacity = 1;
+  bolt.style.animation = "none";
+  void bolt.offsetWidth;
+  bolt.style.animation = "bolt 1s linear";
+  setTimeout(()=> bolt.style.opacity = 0, 700);
+}
+
+function applyMode(mode){
+  resetScene();
+  switch(mode){
+    case 'clear':
+      sun.style.display = "block";
+      document.body.style.background = "linear-gradient(180deg,#0f172a,#0ea5a3)";
+      break;
+    case 'clouds':
+      sun.style.display = "block";
+      cloud1.style.display = "block";
+      cloud2.style.display = "block";
+      document.body.style.background = "linear-gradient(180deg,#1f2937,#3b82f6)";
+      break;
+    case 'rain':
+      cloud1.style.display = "block";
+      cloud2.style.display = "block";
+      makeRain(36);
+      document.body.style.background = "linear-gradient(180deg,#071019,#0f4c6a)";
+      break;
+    case 'snow':
+      cloud1.style.display = "block";
+      cloud2.style.display = "block";
+      makeSnow(28);
+      document.body.style.background = "linear-gradient(180deg,#1a2430,#6fb6ff)";
+      break;
+    case 'thunder':
+      cloud1.style.display = "block";
+      cloud2.style.display = "block";
+      makeRain(28);
+      flashBolt();
+      document.body.style.background = "linear-gradient(180deg,#06070a,#2b2f3a)";
+      break;
+    case 'fog':
+      cloud1.style.display = "block";
+      cloud2.style.display = "block";
+      fogLayer.style.opacity = 0.75;
+      document.body.style.background = "linear-gradient(180deg,#2a2f36,#4a5568)";
+      break;
+  }
+}
+
+document.querySelectorAll('.preset').forEach(b=>{
+  b.addEventListener('click', ()=> applyMode(b.getAttribute('data-mode')));
+});
+
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const city = document.getElementById('cityInput').value.trim();
+  if(!city) return alert("Please enter a city name!");
+
+const sampleWeather = {
+    "New Delhi": { temp: 35, feels: 37, desc: "Sunny", hum: 40, wind: 6, pressure: 1012, clouds: 5, mode: "clear" },
+    "Mumbai": { temp: 31, feels: 33, desc: "Thunderstorm", hum: 78, wind: 8, pressure: 1007, clouds: 90, mode: "thunder" },
+    "Bangalore": { temp: 27, feels: 28, desc: "Cloudy", hum: 65, wind: 4, pressure: 1011, clouds: 70, mode: "clouds" },
+    "Chennai": { temp: 34, feels: 36, desc: "Rainy", hum: 72, wind: 7, pressure: 1009, clouds: 85, mode: "rain" },
+    "Kolkata": { temp: 32, feels: 34, desc: "Partly Cloudy", hum: 68, wind: 5, pressure: 1010, clouds: 50, mode: "clouds" },
+    "Hyderabad": { temp: 30, feels: 31, desc: "Sunny", hum: 48, wind: 5, pressure: 1013, clouds: 10, mode: "clear" },
+    "Pune": { temp: 28, feels: 29, desc: "Clear", hum: 42, wind: 3, pressure: 1012, clouds: 5, mode: "clear" },
+    "Jaipur": { temp: 36, feels: 38, desc: "Sunny", hum: 33, wind: 6, pressure: 1008, clouds: 5, mode: "clear" },
+    "Lucknow": { temp: 33, feels: 34, desc: "Cloudy", hum: 55, wind: 4, pressure: 1010, clouds: 60, mode: "clouds" },
+    "Ahmedabad": { temp: 37, feels: 39, desc: "Sunny", hum: 30, wind: 5, pressure: 1009, clouds: 5, mode: "clear" },
+    "Surat": { temp: 33, feels: 35, desc: "Rainy", hum: 75, wind: 6, pressure: 1007, clouds: 90, mode: "rain" },
+    "Kanpur": { temp: 32, feels: 34, desc: "Cloudy", hum: 60, wind: 4, pressure: 1011, clouds: 50, mode: "clouds" },
+    "Nagpur": { temp: 34, feels: 36, desc: "Sunny", hum: 38, wind: 5, pressure: 1010, clouds: 10, mode: "clear" },
+    "Indore": { temp: 33, feels: 35, desc: "Sunny", hum: 42, wind: 5, pressure: 1010, clouds: 5, mode: "clear" },
+    "Thane": { temp: 30, feels: 32, desc: "Rainy", hum: 70, wind: 6, pressure: 1008, clouds: 85, mode: "rain" },
+    "Bhopal": { temp: 31, feels: 33, desc: "Cloudy", hum: 55, wind: 4, pressure: 1011, clouds: 60, mode: "clouds" },
+    "Visakhapatnam": { temp: 33, feels: 35, desc: "Sunny", hum: 50, wind: 5, pressure: 1012, clouds: 15, mode: "clear" },
+    "Patna": { temp: 32, feels: 34, desc: "Cloudy", hum: 62, wind: 4, pressure: 1010, clouds: 55, mode: "clouds" },
+    "Vadodara": { temp: 35, feels: 37, desc: "Sunny", hum: 35, wind: 5, pressure: 1010, clouds: 5, mode: "clear" },
+    "Ghaziabad": { temp: 33, feels: 35, desc: "Cloudy", hum: 58, wind: 4, pressure: 1011, clouds: 60, mode: "clouds" },
+    // Global cities
+    "New York": { temp: 26, feels: 27, desc: "Sunny", hum: 60, wind: 4, pressure: 1013, clouds: 10, mode: "clear" },
+    "London": { temp: 19, feels: 18, desc: "Cloudy", hum: 72, wind: 5, pressure: 1015, clouds: 65, mode: "clouds" },
+    "Tokyo": { temp: 23, feels: 24, desc: "Rainy", hum: 80, wind: 6, pressure: 1009, clouds: 90, mode: "rain" },
+    "Moscow": { temp: -1, feels: -4, desc: "Snowy", hum: 85, wind: 3, pressure: 1018, clouds: 70, mode: "snow" },
+    "Sydney": { temp: 21, feels: 22, desc: "Clear", hum: 55, wind: 5, pressure: 1014, clouds: 5, mode: "clear" }
+};
+
+
+const loc = document.getElementById('loc');
+const tempEl = document.getElementById('temp');
+const weatherDesc = document.getElementById('weatherDesc');
+const feels = document.getElementById('feels');
+const hum = document.getElementById('hum');
+const wind = document.getElementById('wind');
+const pressure = document.getElementById('pressure');
+const cloudiness = document.getElementById('cloudiness');
+
+const rainLayer = document.getElementById('rainLayer');
+const snowLayer = document.getElementById('snowLayer');
+const fogLayer = document.getElementById('fogLayer');
+const sun = document.getElementById('sun');
+const cloud1 = document.getElementById('cloud1');
+const cloud2 = document.getElementById('cloud2');
+const bolt = document.getElementById('bolt');
+
+function resetScene(){
+    rainLayer.innerHTML = "";
+    snowLayer.innerHTML = "";
+    fogLayer.style.opacity = 0;
+    bolt.style.opacity = 0;
+    sun.style.display = "none";
+    cloud1.style.display = "none";
+    cloud2.style.display = "none";
+}
+
+function makeRain(intensity=30){
+    rainLayer.innerHTML = "";
+    for(let i=0;i<intensity;i++){
+        const d = document.createElement('div');
+        d.className="drop";
+        d.style.left = Math.random()*100 + "%";
+        d.style.animationDelay = (Math.random()*0.6) + "s";
+        d.style.height = (12 + Math.random()*18) + "px";
+        d.style.opacity = 0.8 + Math.random()*0.2;
+        rainLayer.appendChild(d);
+    }
+}
+
+function makeSnow(count=20){
+    snowLayer.innerHTML = "";
+    for(let i=0;i<count;i++){
+        const f = document.createElement('div');
+        f.className="flake";
+        f.style.left = Math.random()*100 + "%";
+        f.style.animationDelay = (Math.random()*6) + "s";
+        f.style.width = f.style.height = (6 + Math.random()*10) + "px";
+        snowLayer.appendChild(f);
+    }
+}
+
+function flashBolt(){
+    bolt.style.opacity = 1;
+    bolt.style.animation = "none";
+    void bolt.offsetWidth;
+    bolt.style.animation = "bolt 1s linear";
+    setTimeout(()=> bolt.style.opacity = 0, 700);
+}
+
+function applyMode(mode){
+    resetScene();
+    switch(mode){
+        case 'clear':
+            sun.style.display = "block";
+            document.body.style.background = "linear-gradient(180deg,#0f172a,#0ea5a3)";
+            break;
+        case 'clouds':
+            sun.style.display = "block";
+            cloud1.style.display = "block";
+            cloud2.style.display = "block";
+            document.body.style.background = "linear-gradient(180deg,#1f2937,#3b82f6)";
+            break;
+        case 'rain':
+            cloud1.style.display = "block";
+            cloud2.style.display = "block";
+            makeRain(36);
+            document.body.style.background = "linear-gradient(180deg,#071019,#0f4c6a)";
+            break;
+        case 'snow':
+            cloud1.style.display = "block";
+            cloud2.style.display = "block";
+            makeSnow(28);
+            document.body.style.background = "linear-gradient(180deg,#1a2430,#6fb6ff)";
+            break;
+        case 'thunder':
+            cloud1.style.display = "block";
+            cloud2.style.display = "block";
+            makeRain(28);
+            flashBolt();
+            document.body.style.background = "linear-gradient(180deg,#06070a,#2b2f3a)";
+            break;
+        case 'fog':
+            cloud1.style.display = "block";
+            cloud2.style.display = "block";
+            fogLayer.style.opacity = 0.75;
+            document.body.style.background = "linear-gradient(180deg,#2a2f36,#4a5568)";
+            break;
+    }
+}
+
+// Update weather UI by city
+function updateWeather(city){
+    const data = sampleWeather[city];
+    if(data){
+        loc.textContent = city;
+        tempEl.textContent = data.temp + "°C";
+        weatherDesc.textContent = data.desc;
+        feels.textContent = "Feels like " + data.feels + "°C";
+        hum.innerHTML = `Humidity<br><strong>${data.hum}%</strong>`;
+        wind.innerHTML = `Wind<br><strong>${data.wind} m/s</strong>`;
+        pressure.innerHTML = `Pressure<br><strong>${data.pressure} hPa</strong>`;
+        cloudiness.innerHTML = `Clouds<br><strong>${data.clouds}%</strong>`;
+        applyMode(data.mode);
+    } else {
+        alert("City not found in sample data!");
+    }
+}
+
+document.getElementById('searchBtn').addEventListener('click', ()=>{
+    const val = document.getElementById('cityInput').value.trim();
+    if(val) updateWeather(val);
+});
+
+
+
+  const data = sampleWeather[city] || { temp: 22, feels: 22, desc: "Cloudy", hum: 50, wind: 5, pressure: 1010, clouds: 50, mode: "clouds" };
+
+  loc.textContent = city;
+  tempEl.textContent = data.temp + "°C";
+  feels.textContent = "Feels like " + data.feels + "°C";
+  weatherDesc.textContent = data.desc;
+  hum.innerHTML = `Humidity<br><strong>${data.hum}%</strong>`;
+  wind.innerHTML = `Wind<br><strong>${data.wind} m/s</strong>`;
+  pressure.innerHTML = `Pressure<br><strong>${data.pressure} hPa</strong>`;
+  cloudiness.innerHTML = `Clouds<br><strong>${data.clouds}%</strong>`;
+
+  applyMode(data.mode);
+});
+</script>
+</body>
+</html>
